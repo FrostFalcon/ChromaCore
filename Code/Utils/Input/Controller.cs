@@ -749,7 +749,6 @@ namespace ChromaCore.Code.Utils.Input
             for (int i = 0; i < c.padBinds.Length; i++)
             {
                 c.padBinds[i] = (Buttons)Math.Round(MathF.Pow(2, data[i + c.keyBinds.Length]));
-                Debug.WriteLine(Math.Round(MathF.Pow(2, data[i])));
             }
 
             return c;

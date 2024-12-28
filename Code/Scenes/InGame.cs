@@ -144,7 +144,6 @@ namespace ChromaCore.Code.Scenes
                     netcodeManager.Update();
                 }
             }
-            else if (cursors.Count > 0 && cursors[0].input.KeyPressed(Controller.Key_Start)) Unpause(cursors[0], pauseMenuUI);
             foreach (GameObject o in miscObjects) if ((camera.target - o.position).Length() < 1920) o.AddLights();
             foreach (Particle p in particles) if ((camera.target - p.position).Length() < 1920) p.AddLights();
 

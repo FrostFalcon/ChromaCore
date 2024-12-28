@@ -11,7 +11,7 @@ namespace ChromaCore.Code.Utils.Input
         public TrainingDummyActions action = TrainingDummyActions.Stand;
         public TrainingDummyBlockTypes blockMode;
 
-        public TrainingDummyController(Fighter player) : base()
+        public TrainingDummyController(Fighter player) : base(-2)
         {
             this.player = player;
         }
@@ -40,6 +40,12 @@ namespace ChromaCore.Code.Utils.Input
             {
                 if (!player.CommitedState) keyPressed[Key_Up] = Inputbuffer;
                 keyDown[Key_Up] = true;
+            }
+            if (action == TrainingDummyActions.Block && target != null)
+            {
+                if (blockMode == TrainingDummyBlockTypes.Low) keyDown[Key_Down] = true;
+
+                if (player.animation == player.guardLowAnim) keyDown[Key_Down] = true;
             }
             UpdateMotionInputs(direction);
         }

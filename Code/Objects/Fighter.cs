@@ -70,6 +70,7 @@ namespace ChromaCore.Code.Objects
         public int armorFrames;
         public int armorFlash;
         public bool hasDoubleJump = false;
+        public int attackStartup;
 
         /// <summary>
         /// Right pressed minus left pressed
@@ -450,6 +451,7 @@ namespace ChromaCore.Code.Objects
             {
                 animation = attack.anim;
                 attackTimer++;
+                attackStartup++;
                 if (attackTimer > attack.duration && attack.duration != -1)
                 {
                     if (attack.airStall && !Grounded) state = States.AirStall;
@@ -796,6 +798,7 @@ namespace ChromaCore.Code.Objects
                 state = States.Attack;
                 attack = att;
                 attackTimer = 0;
+                if (resetHitCheck) attackStartup = 0;
                 DestroyHitboxes();
                 overrideHitboxGroups.Clear();
                 if (resetHitCheck) hasHitPlayer = false;
@@ -848,6 +851,9 @@ namespace ChromaCore.Code.Objects
         /// <returns></returns>
         public virtual bool GotHit(Hitbox hitbox, out int counterHitType)
         {
+            //Extra Stuff
+            if (scene is InGameTraining tr) tr.startupDisplay = hitbox.owner.attackStartup;
+
             counterHitType = -1;
             if (hitbox.hitType.ToString().Contains("Grab") && grabProtection > 0) return false;
             if (Grounded && hitbox.hitType == HitTypes.AirGrab) return false;
@@ -856,11 +862,27 @@ namespace ChromaCore.Code.Objects
             if (hitbox is Projectile && projImmuneFrames > 0) return false;
 
             //Blocking
-            if (Grounded && (!CommitedState || blockStun > 0) && ((hitbox.flipCrossUp ? HoldingForward : HoldingBackward) || crossUpProtection > 0) && !hitbox.hitType.ToString().Contains("Grab"))
+            if (Grounded && (!CommitedState || blockStun > 0) && ((hitbox.flipCrossUp ? HoldingForward : HoldingBackward) || crossUpProtection > 0 ||
+                (input is TrainingDummyController d && scene is InGameTraining && d.action == TrainingDummyActions.Block)) && !hitbox.hitType.ToString().Contains("Grab"))
             {
                 bool blocked = true;
                 if (hitbox.hitType == HitTypes.Low && !input.KeyDown(Controller.Key_Down)) blocked = false;
                 if (hitbox.hitType == HitTypes.Overhead && input.KeyDown(Controller.Key_Down)) blocked = false;
+
+                if (input is TrainingDummyController dummy && scene is InGameTraining train && dummy.action == TrainingDummyActions.Block)
+                {
+                    blocked = false;
+                    if (dummy.blockMode == TrainingDummyBlockTypes.All) blocked = true;
+                    else if (dummy.blockMode == TrainingDummyBlockTypes.High && hitbox.hitType != HitTypes.Low) blocked = true;
+                    else if (dummy.blockMode == TrainingDummyBlockTypes.Low && hitbox.hitType != HitTypes.Overhead) blocked = true;
+                    bool low = hitbox.hitType == HitTypes.Low || dummy.blockMode == TrainingDummyBlockTypes.Low;
+                    if (blocked)
+                    {
+                        animation = low ? guardLowAnim : guardHighAnim;
+                        if (low) dummy.PressKey(Controller.Key_Down);
+                        else dummy.ClearAllInputs();
+                    }
+                }
 
                 if (blocked || (unblockableProtection > 0 && unblockableType != hitbox.hitType))
                 {
@@ -891,6 +913,7 @@ namespace ChromaCore.Code.Objects
                     hitbox.owner.overrideHitboxGroups.Add(hitbox.group);
 
                     animation = input.KeyDown(Controller.Key_Down) ? guardLowAnim : guardHighAnim;
+                    if (scene is InGameTraining tr2) tr2.startupDisplay = hitbox.owner.attackTimer;
 
                     return false;
                 }
@@ -929,9 +952,6 @@ namespace ChromaCore.Code.Objects
             blockStun = 0;
 
             hitbox.owner.lastPlayerHit = this;
-
-            //Extra Stuff
-            if (scene is InGameTraining tr) tr.startupDisplay = hitbox.owner.attackTimer;
             return true;
         }
 
@@ -1166,6 +1186,7 @@ namespace ChromaCore.Code.Objects
             state.Add("airImmuneFrames", airImmuneFrames);
             state.Add("armorFrames", armorFrames);
             state.Add("hasDoubleJump", hasDoubleJump);
+            state.Add("attackStartup", attackStartup);
             state.Add("comboCounter", comboCounter);
             state.Add("comboScaling", comboScaling);
             state.Add("hitstunProperties", new List<HitstunProperties>(hitstunProperties));
@@ -1216,6 +1237,7 @@ namespace ChromaCore.Code.Objects
             airImmuneFrames = (int)state["airImmuneFrames"];
             armorFrames = (int)state["armorFrames"];
             hasDoubleJump = (bool)state["hasDoubleJump"];
+            attackStartup = (int)state["attackStartup"];
             comboCounter = (int)state["comboCounter"];
             comboScaling = (float)state["comboScaling"];
             hitstunProperties = new List<HitstunProperties>((List<HitstunProperties>)state["hitstunProperties"]);
